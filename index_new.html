@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마크AI니 도슨트-Meeting Management System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📋 마크AI니 도슨트</h1>
+            <h1>Meeting Management System</h1>
+            <p>미팅 정보를 입력하면 자동으로 준비 자료를 생성합니다</p>
+        </header>
+
+        <!-- Gmail 인증 섹션 -->
+        <section class="auth-section" id="authSection">
+            <h2>📧 Gmail 계정 연동</h2>
+            <div class="auth-content">
+                <p>Gmail 계정을 연동하여 이메일 검색 및 일정 등록 기능을 사용합니다.</p>
+                <button class="btn btn-primary" onclick="authenticateGmail()">
+                    <span>🔐</span> Gmail 로그인
+                </button>
+                <div class="auth-status" id="authStatus"></div>
+            </div>
+        </section>
+
+        <!-- 메인 입력 섹션 -->
+        <section class="main-input-section" id="mainInputSection" style="display: none;">
+            <h2>🎯 미팅 정보 입력</h2>
+            
+            <div class="meeting-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="meetingDate">미팅 날짜 *</label>
+                        <input type="date" id="meetingDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="meetingTime">미팅 시간 *</label>
+                        <input type="time" id="meetingTime" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="meetingLocation">미팅 장소 *</label>
+                    <input type="text" id="meetingLocation" placeholder="예: 서대문 경찰청" required>
+                    <small>고객사명 또는 주소를 입력하세요</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="customerName">고객사명 *</label>
+                    <input type="text" id="customerName" placeholder="예: 경찰청, 인사혁신처" required>
+                    <small>이메일 검색에 사용됩니다</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="meetingPurpose">미팅 목적</label>
+                    <input type="text" id="meetingPurpose" placeholder="예: 제품 소개, 계약 협의">
+                </div>
+
+                <button class="btn btn-primary btn-large" onclick="prepareMeeting()">
+                    <span>🚀</span> 미팅 준비 시작
+                </button>
+            </div>
+        </section>
+
+        <!-- 준비 결과 섹션 -->
+        <section class="results-container" id="resultsContainer" style="display: none;">
+            
+            <!-- 1. 최신 뉴스 -->
+            <div class="result-card" id="newsCard">
+                <h3>📰 최신 뉴스</h3>
+                <button class="btn btn-primary" onclick="loadNews()" style="margin-bottom: 12px;">
+                    <span>🔍</span> 뉴스 조회
+                </button>
+                <div id="newsContent" class="card-content"></div>
+            </div>
+
+            <!-- 2. 이메일 요약 -->
+            <div class="result-card" id="emailCard">
+                <h3>📧 관련 이메일 요약</h3>
+                <button class="btn btn-primary" onclick="loadEmails()" style="margin-bottom: 12px;">
+                    <span>🔍</span> 이메일 검색
+                </button>
+                <div id="emailContent" class="card-content"></div>
+            </div>
+
+            <!-- 2-1. 연락처 정보 -->
+            <div class="result-card" id="contactCard">
+                <h3>👥 고객사 연락처 정보</h3>
+                <div style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">고객사명</label>
+                        <input type="text" id="contactCustomerName" placeholder="고객사명을 입력하세요 (예: 경찰청)" 
+                               style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #666;">고객명 (선택)</label>
+                        <input type="text" id="contactPersonName" placeholder="고객명을 입력하세요 (예: 홍길동)" 
+                               style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="loadContactInfo()" style="margin-bottom: 12px;">
+                    <span>🔍</span> 연락처 조회
+                </button>
+                <div id="contactContent" class="card-content"></div>
+            </div>
+
+            <!-- 연락처 모달 팝업 -->
+            <div id="contactModal" class="contact-modal">
+                <div class="contact-modal-content">
+                    <div class="contact-modal-header">
+                        <h2 id="contactModalTitle">👥 연락처 정보</h2>
+                        <button class="contact-modal-close" onclick="closeContactModal()">&times;</button>
+                    </div>
+                    <div class="contact-modal-body" id="contactModalBody">
+                        <!-- 연락처 테이블이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 일정 등록 -->
+            <div class="result-card" id="calendarCard">
+                <h3>📅 캘린더 일정</h3>
+                <button class="btn btn-primary" onclick="loadCalendar()" style="margin-bottom: 12px;">
+                    <span>📅</span> 일정 정보 생성
+                </button>
+                <div id="calendarContent" class="card-content"></div>
+            </div>
+
+            <!-- 4. 맛집 추천 -->
+            <div class="result-card" id="restaurantCard">
+                <h3>🍽️ 주변 맛집 추천</h3>
+                
+                <!-- 검색 옵션 -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px;">
+                    <div class="input-field">
+                        <label for="ratingFilter">최소 별점</label>
+                        <select id="ratingFilter" style="padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                            <option value="1">⭐ 1점 이상</option>
+                            <option value="2">⭐⭐ 2점 이상</option>
+                            <option value="3">⭐⭐⭐ 3점 이상</option>
+                            <option value="4" selected>⭐⭐⭐⭐ 4점 이상</option>
+                            <option value="5">⭐⭐⭐⭐⭐ 5점</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="searchRadius">검색 반경</label>
+                        <select id="searchRadius" style="padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                            <option value="500">500m</option>
+                            <option value="1000" selected>1km</option>
+                            <option value="1500">1.5km</option>
+                            <option value="2000">2km</option>
+                            <option value="3000">3km</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label for="resultCount">결과 개수</label>
+                        <select id="resultCount" style="padding: 8px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                            <option value="5">5개</option>
+                            <option value="10" selected>10개</option>
+                            <option value="15">15개</option>
+                            <option value="20">20개</option>
+                            <option value="30">30개</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="loadRestaurants()" style="margin-bottom: 12px;">
+                    <span>🔍</span> 맛집 검색
+                </button>
+                
+                <!-- 지도 표시 영역 -->
+                <div id="restaurantMap" style="width: 100%; height: 400px; border-radius: 8px; margin-bottom: 16px; display: none;"></div>
+                
+                <div id="restaurantContent" class="card-content"></div>
+            </div>
+
+            <!-- 5. 회의록 녹음 -->
+            <div class="result-card" id="recordingCard">
+                <h3>🎙️ 회의록 녹음</h3>
+                <div class="card-content">
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <button class="btn btn-primary btn-large" id="recordBtn" onclick="toggleRecording()" style="min-width: 200px;">
+                            <span id="recordIcon">🎙️</span> <span id="recordText">녹음 시작</span>
+                        </button>
+                    </div>
+                    
+                    <div id="recordingStatus" style="display: none; text-align: center; margin-bottom: 16px;">
+                        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: #ffebee; border-radius: 8px;">
+                            <div class="recording-indicator"></div>
+                            <span style="color: #c62828; font-weight: 600;">녹음 중... <span id="recordingTime">00:00</span></span>
+                        </div>
+                    </div>
+                    
+                    <div id="transcriptContent" style="background: #f8f9fa; padding: 16px; border-radius: 8px; min-height: 100px; max-height: 400px; overflow-y: auto; display: none;">
+                        <h4 style="margin: 0 0 12px 0; color: #2c3e50;">📝 실시간 텍스트 변환</h4>
+                        <div id="transcriptText" style="line-height: 1.8; color: #495057; white-space: pre-wrap;"></div>
+                    </div>
+                    
+                    <div id="minutesActions" style="display: none; margin-top: 16px; text-align: center;">
+                        <button class="btn btn-success" onclick="generateMinutes()">
+                            <span>📄</span> 회의록 생성 및 다운로드
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 이메일 전송 버튼 -->
+            <div class="action-buttons">
+                <button class="btn btn-success btn-large" onclick="sendEmailReport()">
+                    <span>📧</span> 전체 내용 이메일로 받기
+                </button>
+                <button class="btn btn-secondary" onclick="resetAll()">
+                    <span>🔄</span> 새로 시작
+                </button>
+            </div>
+        </section>
+
+        <!-- 로딩 -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner-large"></div>
+                <p id="loadingMessage">미팅 준비 중...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=d2c1bc72a621be1bd6c3f146d3288475&libraries=services"></script>
+    <script src="app_new.js"></script>
+</body>
+</html>
